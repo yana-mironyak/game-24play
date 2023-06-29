@@ -30,6 +30,8 @@ let manAnimation: AnimationClip;
 let brainModel: THREE.Object3D;
 let brainModels: THREE.Object3D[] = [];
 let gltf: GLTF;
+let minPositionByZ: number;
+let crossPosition: number;
 let isKeyPressed = false;
 let isMovingLeft = false;
 let isMovingRight = false;
@@ -41,14 +43,32 @@ function animate() {
   const delta = clock.getDelta();
   const speed = 0.2;
 
+  // brainModels.forEach((brain) => {
+  //   brain.position.z += speed;
+  // });
+
   if (manMixer) {
     manMixer.update(delta);
   }
+
   if (isKeyPressed) {
     brainModels.forEach((brain) => {
       brain.position.z += speed;
     });
+
+    const arrayPositionByZ = brainModels.map(
+      (brainModel) => brainModel.position.z
+    );
+
+    minPositionByZ = Math.round(Math.min(...arrayPositionByZ));
+    console.log(minPositionByZ);
+
+    if (minPositionByZ === -20) {
+      console.log("kjdbck");
+      brainsGenerator();
+    }
   }
+
   if (isMovingLeft) {
     manModel.position.x -= speed;
     brainModels.forEach((brain) => {
@@ -110,6 +130,7 @@ async function init() {
   man.load("./objects/Stickman.glb", function (loadedGltf) {
     gltf = loadedGltf;
     manModel = gltf.scene;
+    const manMaterial = new THREE.MeshStandardMaterial({});
 
     manModel.position.set(0, 4, 0);
     // manModel.rotation.y = Math.PI;
@@ -120,19 +141,16 @@ async function init() {
         shadowLight.shadow.camera.right = 40;
         shadowLight.shadow.camera.top = 40;
         shadowLight.shadow.camera.bottom = -40;
+        child.material = manMaterial;
       }
     });
 
     changeAnimation(3);
 
     scene.add(manModel);
+
+    brainsGenerator();
   });
-
-  const trackWidth = 10; //х
-  const trackHeight = 5; //у
-  const trackLength = -25;
-
-  brainsGenerator(trackWidth, trackHeight, trackLength);
 
   camera.position.set(0, 12, 9);
 
@@ -205,13 +223,9 @@ function changeAnimation(index: number) {
   }
 }
 
-function brainsGenerator(
-  trackWidth: number,
-  trackHeight: number,
-  trackLength: number
-) {
+function brainsGenerator() {
   brain.load("./objects/Brain.glb", function (loadedGltf) {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       gltf = loadedGltf;
       brainModel = gltf.scene.clone();
 
@@ -220,14 +234,17 @@ function brainsGenerator(
         color: brainColor,
       });
 
-      brainModel.scale.set(1.5, 1.5, 1.5);
+      brainModel.scale.set(2, 2, 2);
+      const trackWidth = 16; //х
+      const trackHeight = 1; //у
+      const trackLength = -40;
 
       const randomX = Math.random() * trackWidth - trackWidth / 2;
-      const randomZ = Math.random() * trackLength;
       const randomY = trackHeight;
-      // const randomY = trackHeight * Math.floor(Math.random() * 3) + 9;
+      const randomZ = Math.random() * trackLength - 20;
 
       brainModel.position.set(randomX, randomY, randomZ);
+
       brainModel.traverse((child) => {
         if (child instanceof THREE.Mesh) {
           child.castShadow = true;
@@ -239,6 +256,12 @@ function brainsGenerator(
 
       brainModels.push(brainModel);
     }
+
+    // const arrayPositionByZ = brainModels.map(
+    //   (brainModel) => brainModel.position.z
+    // );
+    // minPositionByZ = Math.min(...arrayPositionByZ);
+    // console.log(minPositionByZ);
   });
 }
 
