@@ -23,6 +23,7 @@ const track = new GLTFLoader();
 const man = new GLTFLoader();
 const brain = new GLTFLoader();
 const clock = new THREE.Clock();
+const manHitbox = new THREE.Box3();
 
 let manModel: THREE.Object3D;
 let manMixer: AnimationMixer;
@@ -31,60 +32,11 @@ let brainModel: THREE.Object3D;
 let brainModels: THREE.Object3D[] = [];
 let gltf: GLTF;
 let minPositionByZ: number;
-let crossPosition: number;
-let isKeyPressed = false;
+// let crossPosition: number;
+let isGameStart = false;
 let isMovingLeft = false;
 let isMovingRight = false;
-let isAnimationPlaying = false;
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  const delta = clock.getDelta();
-  const speed = 0.2;
-
-  // brainModels.forEach((brain) => {
-  //   brain.position.z += speed;
-  // });
-
-  if (manMixer) {
-    manMixer.update(delta);
-  }
-
-  if (isKeyPressed) {
-    brainModels.forEach((brain) => {
-      brain.position.z += speed;
-    });
-
-    const arrayPositionByZ = brainModels.map(
-      (brainModel) => brainModel.position.z
-    );
-
-    minPositionByZ = Math.round(Math.min(...arrayPositionByZ));
-    console.log(minPositionByZ);
-
-    if (minPositionByZ === -20) {
-      console.log("kjdbck");
-      brainsGenerator();
-    }
-  }
-
-  if (isMovingLeft) {
-    manModel.position.x -= speed;
-    brainModels.forEach((brain) => {
-      brain.position.z += speed;
-    });
-  } else if (isMovingRight) {
-    manModel.position.x += speed;
-    brainModels.forEach((brain) => {
-      brain.position.z += speed;
-    });
-  }
-
-  renderer.render(scene, camera);
-}
-
-animate();
+let manOriginalColor: THREE.Color;
 
 async function init() {
   scene.background = new THREE.Color(0xabcdef);
@@ -132,7 +84,10 @@ async function init() {
     manModel = gltf.scene;
     const manMaterial = new THREE.MeshStandardMaterial({});
 
-    manModel.position.set(0, 4, 0);
+    manOriginalColor = manMaterial.color;
+
+    manModel.scale.set(1.3, 1.3, 1.3);
+    manModel.position.set(0, 0, -4);
     // manModel.rotation.y = Math.PI;
     manModel.traverse((child) => {
       if (child instanceof THREE.Mesh) {
@@ -145,10 +100,9 @@ async function init() {
       }
     });
 
-    changeAnimation(3);
-
     scene.add(manModel);
 
+    changeAnimation(3);
     brainsGenerator();
   });
 
@@ -158,33 +112,72 @@ async function init() {
   document.addEventListener("keyup", handleKeyUp);
 }
 
+function animate() {
+  requestAnimationFrame(animate);
+
+  const delta = clock.getDelta();
+  const speed = 0.2;
+
+  if (manMixer) {
+    manMixer.update(delta);
+  }
+
+  if (isMovingLeft) {
+    manModel.position.x -= speed / 2;
+  } else if (isMovingRight) {
+    manModel.position.x += speed / 2;
+  }
+
+  if (isGameStart) {
+    const manBoundingBox = manHitbox.setFromObject(manModel);
+
+    changeAnimation(4);
+
+    brainModels.forEach((brain) => {
+      const brainBoundingBox = new THREE.Box3().setFromObject(brain);
+
+      brain.position.z += speed;
+
+      if (manBoundingBox.intersectsBox(brainBoundingBox)) {
+        const brainMesh = brain.getObjectByName("Brain_collect") as THREE.Mesh;
+        const brainMaterial = brainMesh.material as THREE.MeshStandardMaterial;
+        manOriginalColor.copy(brainMaterial.color);
+        manOriginalColor = brainMaterial.color;
+      } else {
+      }
+    });
+
+    const arrayPositionByZ = brainModels.map(
+      (brainModel) => brainModel.position.z
+    );
+
+    minPositionByZ = Math.floor(Math.min(...arrayPositionByZ) * 10) / 10;
+    // console.log(minPositionByZ);
+
+    if (minPositionByZ === -25) {
+      brainsGenerator();
+    }
+  }
+
+  renderer.render(scene, camera);
+}
+
+animate();
+
 function handleKeyDown(event: KeyboardEvent) {
   const keyCode = event.code;
 
-  if (!isKeyPressed) {
-    switch (keyCode) {
-      case "ArrowUp":
-        isKeyPressed = true;
-        changeAnimation(4);
-        brainModels.map((brain) => {
-          brain.position.z += 1;
-        });
-        break;
-      case "ArrowLeft":
-        isMovingLeft = true;
-        if (!isAnimationPlaying) {
-          changeAnimation(4);
-          isAnimationPlaying = true;
-        }
-        break;
-      case "ArrowRight":
-        isMovingRight = true;
-        if (!isAnimationPlaying) {
-          changeAnimation(4);
-          isAnimationPlaying = true;
-        }
-        break;
-    }
+  switch (keyCode) {
+    case "ArrowLeft":
+      isMovingLeft = true;
+      break;
+    case "ArrowRight":
+      isMovingRight = true;
+      break;
+    case "ArrowUp":
+      isGameStart = true;
+      changeAnimation(4);
+      break;
   }
 }
 
@@ -192,21 +185,11 @@ function handleKeyUp(event: KeyboardEvent) {
   const keyCode = event.code;
 
   switch (keyCode) {
-    case "ArrowUp":
-      isKeyPressed = false;
-      changeAnimation(3);
-      break;
     case "ArrowLeft":
       isMovingLeft = false;
-      if (!isMovingRight) {
-        isAnimationPlaying = false;
-      }
       break;
     case "ArrowRight":
       isMovingRight = false;
-      if (!isMovingLeft) {
-        isAnimationPlaying = false;
-      }
       break;
   }
 }
@@ -225,7 +208,7 @@ function changeAnimation(index: number) {
 
 function brainsGenerator() {
   brain.load("./objects/Brain.glb", function (loadedGltf) {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 2; i++) {
       gltf = loadedGltf;
       brainModel = gltf.scene.clone();
 
@@ -235,13 +218,13 @@ function brainsGenerator() {
       });
 
       brainModel.scale.set(2, 2, 2);
-      const trackWidth = 16; //х
-      const trackHeight = 1; //у
+      const trackWidth = 16;
+      const trackHeight = 1;
       const trackLength = -40;
 
-      const randomX = Math.random() * trackWidth - trackWidth / 2;
+      const randomX = Math.round(Math.random() * trackWidth - trackWidth / 2);
       const randomY = trackHeight;
-      const randomZ = Math.random() * trackLength - 20;
+      const randomZ = Math.round(Math.random() * trackLength - 20);
 
       brainModel.position.set(randomX, randomY, randomZ);
 
@@ -256,12 +239,6 @@ function brainsGenerator() {
 
       brainModels.push(brainModel);
     }
-
-    // const arrayPositionByZ = brainModels.map(
-    //   (brainModel) => brainModel.position.z
-    // );
-    // minPositionByZ = Math.min(...arrayPositionByZ);
-    // console.log(minPositionByZ);
   });
 }
 
