@@ -32,11 +32,11 @@ let brainModel: THREE.Object3D;
 let brainModels: THREE.Object3D[] = [];
 let gltf: GLTF;
 let minPositionByZ: number;
-// let crossPosition: number;
 let isGameStart = false;
 let isMovingLeft = false;
 let isMovingRight = false;
 let manOriginalColor: THREE.Color;
+let trackBoundingBox: THREE.Box3;
 
 async function init() {
   scene.background = new THREE.Color(0xabcdef);
@@ -62,6 +62,7 @@ async function init() {
     const textureLoader = new THREE.TextureLoader();
     const texture = textureLoader.load("./objects/sand-texture.jpg");
     const trackModel = gltf.scene;
+    trackBoundingBox = new THREE.Box3().setFromObject(trackModel);
 
     trackModel.scale.set(2, 3, 8);
     trackModel.traverse((child) => {
@@ -84,7 +85,7 @@ async function init() {
     manModel = gltf.scene;
     const manMaterial = new THREE.MeshStandardMaterial({});
 
-    manOriginalColor = manMaterial.color;
+    manOriginalColor = manMaterial.color.clone();
 
     manModel.scale.set(1.3, 1.3, 1.3);
     manModel.position.set(0, 0, -4);
@@ -123,9 +124,17 @@ function animate() {
   }
 
   if (isMovingLeft) {
-    manModel.position.x -= speed / 2;
+    const manBoundingBox = new THREE.Box3().setFromObject(manModel);
+    const manWidth = manBoundingBox.max.x - manBoundingBox.min.x;
+    if (manModel.position.x >= trackBoundingBox.min.x - manWidth) {
+      manModel.position.x -= speed;
+    }
   } else if (isMovingRight) {
-    manModel.position.x += speed / 2;
+    const manBoundingBox = new THREE.Box3().setFromObject(manModel);
+    const manWidth = manBoundingBox.max.x - manBoundingBox.min.x;
+    if (manModel.position.x <= trackBoundingBox.max.x + manWidth) {
+      manModel.position.x += speed;
+    }
   }
 
   if (isGameStart) {
@@ -135,15 +144,34 @@ function animate() {
 
     brainModels.forEach((brain) => {
       const brainBoundingBox = new THREE.Box3().setFromObject(brain);
+      const brainMesh = brain.getObjectByName("Brain_collect") as THREE.Mesh;
+      const brainMaterial = brainMesh.material as THREE.MeshStandardMaterial;
+      const manMesh = manModel.getObjectByName("Stickman") as THREE.Mesh;
+      const manMaterial = manMesh.material as THREE.MeshStandardMaterial;
+      const scale = 0.5;
+      const center = new THREE.Vector3();
+      brainBoundingBox.getCenter(center);
+      const size = brainBoundingBox.getSize(new THREE.Vector3());
+      const scaledSize = size.clone().multiplyScalar(scale);
+
+      const min = new THREE.Vector3(
+        center.x - scaledSize.x / 2,
+        center.y - scaledSize.y / 2,
+        center.z - scaledSize.z / 2
+      );
+      const max = new THREE.Vector3(
+        center.x + scaledSize.x / 2,
+        center.y + scaledSize.y / 2,
+        center.z - scaledSize.z * 4
+      );
+
+      brainBoundingBox.set(min, max);
 
       brain.position.z += speed;
 
       if (manBoundingBox.intersectsBox(brainBoundingBox)) {
-        const brainMesh = brain.getObjectByName("Brain_collect") as THREE.Mesh;
-        const brainMaterial = brainMesh.material as THREE.MeshStandardMaterial;
-        manOriginalColor.copy(brainMaterial.color);
-        manOriginalColor = brainMaterial.color;
-      } else {
+        manMaterial.color.copy(brainMaterial.color);
+        scene.remove(brain);
       }
     });
 
@@ -152,9 +180,8 @@ function animate() {
     );
 
     minPositionByZ = Math.floor(Math.min(...arrayPositionByZ) * 10) / 10;
-    // console.log(minPositionByZ);
 
-    if (minPositionByZ === -25) {
+    if (minPositionByZ === -20) {
       brainsGenerator();
     }
   }
@@ -208,7 +235,7 @@ function changeAnimation(index: number) {
 
 function brainsGenerator() {
   brain.load("./objects/Brain.glb", function (loadedGltf) {
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       gltf = loadedGltf;
       brainModel = gltf.scene.clone();
 
