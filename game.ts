@@ -1,6 +1,9 @@
 import * as THREE from "three";
 import { GLTF, GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { AnimationClip, AnimationMixer } from "three";
+import { AnimationMixer } from "three";
+import { getRandomColor } from "./public/utils/random-color";
+import { changeAnimation } from "./public/utils/animation";
+import { getHand, getText } from "./public/utils/hand";
 
 const scene = new THREE.Scene();
 
@@ -27,16 +30,18 @@ const manHitbox = new THREE.Box3();
 
 let manModel: THREE.Object3D;
 let manMixer: AnimationMixer;
-let manAnimation: AnimationClip;
 let brainModel: THREE.Object3D;
 let brainModels: THREE.Object3D[] = [];
 let gltf: GLTF;
+let manGltf: GLTF;
 let minPositionByZ: number;
 let isGameStart = false;
 let isMovingLeft = false;
 let isMovingRight = false;
 let manOriginalColor: THREE.Color;
 let trackBoundingBox: THREE.Box3;
+let hand: THREE.Object3D<THREE.Event>;
+let text: THREE.Object3D<THREE.Event>;
 
 async function init() {
   scene.background = new THREE.Color(0xabcdef);
@@ -81,8 +86,10 @@ async function init() {
   });
 
   man.load("./objects/Stickman.glb", function (loadedGltf) {
-    gltf = loadedGltf;
-    manModel = gltf.scene;
+    manGltf = loadedGltf;
+    manModel = manGltf.scene;
+    manMixer = new THREE.AnimationMixer(manModel);
+
     const manMaterial = new THREE.MeshStandardMaterial({});
 
     manOriginalColor = manMaterial.color.clone();
@@ -102,11 +109,12 @@ async function init() {
     });
 
     scene.add(manModel);
-
-    changeAnimation(3);
+    changeAnimation(manGltf, manMixer, 3);
     brainsGenerator();
   });
 
+  hand = getHand(scene);
+  text = getText(scene);
   camera.position.set(0, 12, 9);
 
   document.addEventListener("keydown", handleKeyDown);
@@ -117,30 +125,30 @@ function animate() {
   requestAnimationFrame(animate);
 
   const delta = clock.getDelta();
-  const speed = 0.2;
+  const speed = 0.5;
 
   if (manMixer) {
     manMixer.update(delta);
   }
 
-  if (isMovingLeft) {
-    const manBoundingBox = new THREE.Box3().setFromObject(manModel);
-    const manWidth = manBoundingBox.max.x - manBoundingBox.min.x;
-    if (manModel.position.x >= trackBoundingBox.min.x - manWidth) {
-      manModel.position.x -= speed;
-    }
-  } else if (isMovingRight) {
-    const manBoundingBox = new THREE.Box3().setFromObject(manModel);
-    const manWidth = manBoundingBox.max.x - manBoundingBox.min.x;
-    if (manModel.position.x <= trackBoundingBox.max.x + manWidth) {
-      manModel.position.x += speed;
-    }
-  }
-
   if (isGameStart) {
     const manBoundingBox = manHitbox.setFromObject(manModel);
+    scene.remove(hand);
+    scene.remove(text);
 
-    changeAnimation(4);
+    if (isMovingLeft) {
+      const manBoundingBox = new THREE.Box3().setFromObject(manModel);
+      const manWidth = manBoundingBox.max.x - manBoundingBox.min.x;
+      if (manModel.position.x >= trackBoundingBox.min.x - manWidth) {
+        manModel.position.x -= speed / 2;
+      }
+    } else if (isMovingRight) {
+      const manBoundingBox = new THREE.Box3().setFromObject(manModel);
+      const manWidth = manBoundingBox.max.x - manBoundingBox.min.x;
+      if (manModel.position.x <= trackBoundingBox.max.x + manWidth) {
+        manModel.position.x += speed / 2;
+      }
+    }
 
     brainModels.forEach((brain) => {
       const brainBoundingBox = new THREE.Box3().setFromObject(brain);
@@ -167,11 +175,12 @@ function animate() {
 
       brainBoundingBox.set(min, max);
 
-      brain.position.z += speed;
+      brain.position.z += speed / 2;
 
       if (manBoundingBox.intersectsBox(brainBoundingBox)) {
         manMaterial.color.copy(brainMaterial.color);
         scene.remove(brain);
+        brainModels = brainModels.filter((b) => b !== brain);
       }
     });
 
@@ -197,13 +206,15 @@ function handleKeyDown(event: KeyboardEvent) {
   switch (keyCode) {
     case "ArrowLeft":
       isMovingLeft = true;
+
       break;
     case "ArrowRight":
       isMovingRight = true;
       break;
     case "ArrowUp":
       isGameStart = true;
-      changeAnimation(4);
+      changeAnimation(manGltf, manMixer, 4);
+
       break;
   }
 }
@@ -221,21 +232,9 @@ function handleKeyUp(event: KeyboardEvent) {
   }
 }
 
-function changeAnimation(index: number) {
-  const animations = gltf.animations;
-  if (animations && animations.length) {
-    manMixer = new AnimationMixer(manModel);
-    manAnimation = animations[index];
-
-    const action = manMixer.clipAction(manAnimation);
-
-    action.play();
-  }
-}
-
 function brainsGenerator() {
-  brain.load("./objects/Brain.glb", function (loadedGltf) {
-    for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < 4; i++) {
+    brain.load("./objects/Brain.glb", function (loadedGltf) {
       gltf = loadedGltf;
       brainModel = gltf.scene.clone();
 
@@ -265,14 +264,8 @@ function brainsGenerator() {
       scene.add(brainModel);
 
       brainModels.push(brainModel);
-    }
-  });
-}
-
-function getRandomColor() {
-  const colors = [0x0000ff, 0xffa500, 0x800080];
-  const randomIndex = Math.floor(Math.random() * colors.length);
-  return colors[randomIndex];
+    });
+  }
 }
 
 init();

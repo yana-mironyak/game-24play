@@ -8,6 +8,6 @@
     "target": "es2017",
     "outDir": "./objects/dist"
   },
-  "include": ["**/*.ts", "objects/dist/water.js"],
+  "include": ["**/*.ts", "objects/dist/water.js", "public/utils/movement.js"],
   "exclude": ["node_modules"]
 }
