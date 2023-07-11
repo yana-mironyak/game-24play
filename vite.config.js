@@ -5,5 +5,9 @@ export default defineConfig(async () => {
 
   return {
     plugins: [glsl.default()],
+    server: {
+      host: true,
+      port: 8080,
+    },
   };
 });
