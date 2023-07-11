@@ -10,7 +10,7 @@
     "vite-plugin-glsl": "^1.1.2"
   },
   "scripts": {
-    "start": "vite",
+    "start": "npx vite",
     "build": "vite build"
   }
 }
