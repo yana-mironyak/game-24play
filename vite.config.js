@@ -6,9 +6,9 @@ export default defineConfig(async () => {
   return {
     build: {
       lib: {
-        entry: resolve(__dirname, "src/index.ts"),
+        entry: resolve(__dirname, "src/game.ts"),
         name: "Game",
-        fileName: "game.ts",
+        fileName: "game",
       },
     },
     rollupOptions: {
