@@ -6,7 +6,7 @@ export default defineConfig(async () => {
   return {
     build: {
       lib: {
-        entry: resolve(__dirname, "game.ts"),
+        entry: resolve(__dirname, "src/index.ts"),
         name: "Game",
         fileName: "game.ts",
       },
