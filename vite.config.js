@@ -11,6 +11,9 @@ export default defineConfig(async () => {
         fileName: "game.ts",
       },
     },
+    rollupOptions: {
+      external: [/^node:\w+/],
+    },
     plugins: [glsl.default()],
     server: {
       host: true,
