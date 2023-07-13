@@ -96,7 +96,7 @@ async function init() {
 
     manModel.scale.set(1.3, 1.3, 1.3);
     manModel.position.set(0, 0, -4);
-    // manModel.rotation.y = Math.PI;
+    manModel.rotation.y = Math.PI;
     manModel.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.castShadow = true;
