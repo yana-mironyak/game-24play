@@ -42,6 +42,7 @@ let manOriginalColor: THREE.Color;
 let trackBoundingBox: THREE.Box3;
 let hand: THREE.Object3D<THREE.Event>;
 let text: THREE.Object3D<THREE.Event>;
+let fingerStartPosition = { x: 0, y: 0 };
 
 async function init() {
   scene.background = new THREE.Color(0xabcdef);
@@ -116,6 +117,41 @@ async function init() {
   hand = getHand(scene);
   text = getText(scene);
   camera.position.set(0, 12, 9);
+
+  document.addEventListener("touchstart", handleTouchStart);
+  document.addEventListener("touchmove", handleTouchMove);
+  document.addEventListener("touchend", handleTouchEnd);
+
+  function handleTouchStart(event: TouchEvent) {
+    const touch = event.touches[0];
+    fingerStartPosition.x = touch.clientX;
+    fingerStartPosition.y = touch.clientY;
+  }
+
+  function handleTouchMove(event: TouchEvent) {
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - fingerStartPosition.x;
+
+    if (deltaX > 0) {
+      // Рух вправо
+      isMovingRight = true;
+      isMovingLeft = false;
+    } else if (deltaX < 0) {
+      // Рух вліво
+      isMovingLeft = true;
+      isMovingRight = false;
+    } else {
+      // Немає руху
+      isMovingLeft = false;
+      isMovingRight = false;
+    }
+  }
+
+  function handleTouchEnd() {
+    // Закінчення торкання
+    isMovingLeft = false;
+    isMovingRight = false;
+  }
 
   document.addEventListener("keydown", handleKeyDown);
   document.addEventListener("keyup", handleKeyUp);
