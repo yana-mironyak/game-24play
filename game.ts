@@ -122,39 +122,43 @@ async function init() {
   document.addEventListener("touchmove", handleTouchMove);
   document.addEventListener("touchend", handleTouchEnd);
 
-  function handleTouchStart(event: TouchEvent) {
-    const touch = event.touches[0];
-    fingerStartPosition.x = touch.clientX;
-    fingerStartPosition.y = touch.clientY;
-  }
+  document.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("keyup", handleKeyUp);
+}
 
-  function handleTouchMove(event: TouchEvent) {
-    const touch = event.touches[0];
-    const deltaX = touch.clientX - fingerStartPosition.x;
+function handleTouchStart(event: TouchEvent) {
+  const touch = event.touches[0];
+  fingerStartPosition.x = touch.clientX;
+  fingerStartPosition.y = touch.clientY;
+  isGameStart = true;
+  changeAnimation(manGltf, manMixer, 4);
+  console.log("down");
+}
 
-    if (deltaX > 0) {
-      // Рух вправо
-      isMovingRight = true;
-      isMovingLeft = false;
-    } else if (deltaX < 0) {
-      // Рух вліво
-      isMovingLeft = true;
-      isMovingRight = false;
-    } else {
-      // Немає руху
-      isMovingLeft = false;
-      isMovingRight = false;
-    }
-  }
+function handleTouchMove(event: TouchEvent) {
+  const touch = event.touches[0];
+  const deltaX = touch.clientX - fingerStartPosition.x;
+  console.log("slkdrjf");
 
-  function handleTouchEnd() {
-    // Закінчення торкання
+  if (deltaX > 0) {
+    isMovingRight = true;
+    isMovingLeft = false;
+    console.log("право");
+  } else if (deltaX < 0) {
+    isMovingLeft = true;
+    isMovingRight = false;
+    console.log("ліво");
+  } else {
     isMovingLeft = false;
     isMovingRight = false;
   }
+}
 
-  document.addEventListener("keydown", handleKeyDown);
-  document.addEventListener("keyup", handleKeyUp);
+function handleTouchEnd() {
+  // Закінчення торкання
+  isMovingLeft = false;
+  isMovingRight = false;
+  console.log("up");
 }
 
 function animate() {
